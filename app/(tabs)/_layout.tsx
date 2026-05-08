@@ -1,35 +1,67 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import {Ionicons} from "@expo/vector-icons";
+import {Tabs} from "expo-router";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+//Este layout se encarga de renderizar las pestañas 
+//de navegación en la parte inferior de la aplicación. 
+//Cada pestaña representa una sección diferente de la aplicación, 
+//como "Inicio", "Favoritos" y "Clases". 
+//Se utilizan iconos de Ionicons para representar 
+//visualmente cada pestaña, y el color del icono 
+//cambia según si la pestaña está activa o no. Además,
+//se oculta el encabezado para cada pantalla dentro de las pestañas
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+export default function RootLayout() {
+  return  (
+    <Tabs screenOptions={{headerShown: false}}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarLabel: "Inicio",
+          headerTitle: "Inicio",
+          title: "Inicio",
+          tabBarActiveTintColor: "blue",
+          tabBarInactiveTintColor: "gray",
+          tabBarIcon: ({color, size, focused}) => (
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={size}
+              color={color}
+            />
+          )
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="favoritos"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Favoritos",
+          tabBarLabel: "Favoritos",
+          tabBarActiveTintColor: "blue",
+          tabBarInactiveTintColor: "gray",
+          tabBarIcon: ({color, size, focused}) => (
+            <Ionicons
+              name={focused ? "heart" : "heart-outline"}
+              size={size}
+              color={color}
+            />
+          )
+        }}
+      />
+      <Tabs.Screen
+        name="clases"
+        options={{
+          title: "Clases",
+          tabBarLabel: "Clases",
+          tabBarActiveTintColor: "blue",
+          tabBarInactiveTintColor: "gray",
+          tabBarIcon: ({color, size, focused}) => (
+            <Ionicons
+              name={focused ? "grid" : "grid-outline"} //Es el icono de cuadrícula para representar las clases
+              size={size} //tamaño del icono
+              color={color} //color del icono, que cambia según si está enfocado o no
+            />
+          )
         }}
       />
     </Tabs>
-  );
+  )
 }
