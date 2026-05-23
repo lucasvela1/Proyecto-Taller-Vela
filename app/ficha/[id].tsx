@@ -1,8 +1,9 @@
 import { marcas } from "@/src/data/marcas";
 import { productos } from "@/src/data/productos";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import "react-native-reanimated";
 
@@ -36,6 +37,41 @@ export default function FichaScreen() {
   const [isFav, setIsFav] = useState(false);
   const productId = typeof id === "string" ? id : "";
   const producto = productos.find((item) => item.id === productId);
+  const [isFavorito, setIsFavorito] = useState(false); //Inicializamos los productos como falso favorito
+
+  const guardarFavorito = async (productId: string) => {
+    await AsyncStorage.setItem("productosFavoritos", productId);
+    console.log("Producto guardado en favoritos:", productId);
+    return true;
+  };
+
+  const eliminarFavorito = async () => {
+    await AsyncStorage.removeItem("productosFavoritos");
+    console.log("Producto eliminado de favoritos");
+    return true;
+  };
+
+  const recuperarFavorito = async () => {
+    const favorito = await AsyncStorage.getItem("productosFavoritos");
+    return favorito;
+  };
+
+  useEffect(() => {
+    recuperarFavorito().then((favorito) => {
+      if (favorito === productId) {
+        setIsFavorito(true); //Si el producto es igual al producto guardado en favoritos, se marca como favorito
+      }
+    });
+  }, [productId]); //No le estoy pasando ninguna refencia, pero podría pasarle el id
+  //Le puse el productId para que cada vez que cambie el producto, se vuelva a verificar si es favorito o no
+
+  function toogleFavorito() {
+    if (isFavorito) {
+      eliminarFavorito().then(() => setIsFavorito(false)); //Si el producto ya es favorito, se elimina de favoritos y se actualiza el estado
+    } else {
+      guardarFavorito(productId).then(() => setIsFavorito(true)); //Si el producto no es favorito, se guarda en favoritos y se actualiza el estado
+    }
+  }
 
   if (!producto) {
     return (
@@ -74,7 +110,15 @@ export default function FichaScreen() {
           />
 
           <Pressable
-            onPress={() => setIsFav((prev) => !prev)}
+            onPress={async () => {
+              if (isFav) {
+                await eliminarFavorito();
+                setIsFav(false);
+              } else {
+                await guardarFavorito(productId);
+                setIsFav(true);
+              }
+            }}
             style={styles.heartButton}
           >
             <Text
