@@ -1,16 +1,23 @@
+import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus";
+import { FAVORITOS_HOOK_KEY } from "@/src/hooks/use-favoritos";
 import { useRouter } from "expo-router";
-import { Button, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 //El _sitemap es un archivo generado automaticamente por Expor Router y se usa para
 //depurar y ver el mapa de rutas de la app
 
 export default function FavoritosScreen() {
   const router = useRouter();
+  useRefreshOnFocus(FAVORITOS_HOOK_KEY);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Favoritos</Text>
-      <Text style={styles.description}>Segundo tab de navegación básica</Text>
-      <Button title="SITEMAP" onPress={() => router.push("/_sitemap")} />
+      {favoritos.map((favorito) => (
+        <Text key={favorito.id} style={styles.description}>
+          {favorito.nombre}
+        </Text>
+      ))}
     </View>
   );
 }

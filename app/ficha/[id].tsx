@@ -1,6 +1,7 @@
 import { marcas } from "@/src/data/marcas";
 import { productos } from "@/src/data/productos";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -38,28 +39,52 @@ export default function FichaScreen() {
   const productId = typeof id === "string" ? id : "";
   const producto = productos.find((item) => item.id === productId);
   const [isFavorito, setIsFavorito] = useState(false); //Inicializamos los productos como falso favorito
+  const queryClient = useQueryClient();
+  type ProductoFavorito = {
+    id: string;
+    nombre: string;
+  };
 
   const guardarFavorito = async (productId: string) => {
-    await AsyncStorage.setItem("productosFavoritos", productId);
+    const favoritos = await obtenerFavoritos();
+    let favoritosArray: ProductoFavorito[] = favoritos ? favoritos : [];
+    favoritosArray.push({ id: productId, nombre: producto?.nombre ?? "" });
+    await AsyncStorage.setItem(
+      "productosFavoritos",
+      JSON.stringify(favoritosArray),
+    );
     console.log("Producto guardado en favoritos:", productId);
     return true;
   };
 
-  const eliminarFavorito = async () => {
-    await AsyncStorage.removeItem("productosFavoritos");
-    console.log("Producto eliminado de favoritos");
+  const eliminarFavorito = async (productId: string) => {
+    const favoritos = await obtenerFavoritos();
+    let favoritosArray: ProductoFavorito[] = favoritos ? favoritos : [];
+    favoritosArray = favoritosArray.filter((item) => item.id !== productId);
+    await AsyncStorage.setItem(
+      "productosFavoritos",
+      JSON.stringify(favoritosArray),
+    );
+    console.log("Producto eliminado de favoritos:", productId);
     return true;
   };
 
-  const recuperarFavorito = async () => {
-    const favorito = await AsyncStorage.getItem("productosFavoritos");
-    return favorito;
+  const obtenerFavoritos = async (): Promise<ProductoFavorito[]> => {
+    const favoritos = await AsyncStorage.getItem("productosFavoritos");
+    return favoritos ? JSON.parse(favoritos) : [];
   };
+
+  const recuperarFavorito = async () => {
+    const favoritos = await obtenerFavoritos();
+    let favoritosArray: ProductoFavorito[] = favoritos ? favoritos : [];
+    return favoritosArray.find((item) => item.id === productId)?.id || null; //Buscamos el producto en favoritos, si lo encontramos retornamos su id, sino retornamos null
+  }; //Find solo devuelve el primer elemento que encuentra, no todos los concidentes
+  //Ponemos que devuelva null si no encuentra nada para evitar el undefined
 
   useEffect(() => {
     recuperarFavorito().then((favorito) => {
       if (favorito === productId) {
-        setIsFavorito(true); //Si el producto es igual al producto guardado en favoritos, se marca como favorito
+        setIsFavorito(true); //Si el producto es igual al producto   guardado en favoritos, se marca como favorito
       }
     });
   }, [productId]); //No le estoy pasando ninguna refencia, pero podría pasarle el id
@@ -67,10 +92,11 @@ export default function FichaScreen() {
 
   function toogleFavorito() {
     if (isFavorito) {
-      eliminarFavorito().then(() => setIsFavorito(false)); //Si el producto ya es favorito, se elimina de favoritos y se actualiza el estado
+      eliminarFavorito(productId).then(() => setIsFavorito(false)); //Si el producto ya es favorito, se elimina de favoritos y se actualiza el estado
     } else {
       guardarFavorito(productId).then(() => setIsFavorito(true)); //Si el producto no es favorito, se guarda en favoritos y se actualiza el estado
     }
+    queryClient.invalidateQueries("FAVORITOS_HOOK_KEY"); //Invalidamos la query de favoritos para que se vuelva a cargar la lista de favoritos actualizada
   }
 
   if (!producto) {
@@ -112,7 +138,7 @@ export default function FichaScreen() {
           <Pressable
             onPress={async () => {
               if (isFav) {
-                await eliminarFavorito();
+                await eliminarFavorito(productId);
                 setIsFav(false);
               } else {
                 await guardarFavorito(productId);
