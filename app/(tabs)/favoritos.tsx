@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 export default function FavoritosScreen() {
@@ -19,11 +19,11 @@ export default function FavoritosScreen() {
   const [searchTerm, setSearchTerm] = useState("");
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
 
-  const loadFavorites = async () => {
+  const loadFavorites = useCallback(async () => {
     const data = await obtenerFavoritos();
     setFavorites(data);
     setRemovedIds(new Set());
-  };
+  }, []);
 
   // Reset state and refresh data from storage when screen is focused (navigation change)
   useEffect(() => {
@@ -31,13 +31,13 @@ export default function FavoritosScreen() {
       loadFavorites();
       queryClient.invalidateQueries({ queryKey: FAVORITOS_HOOK_KEY });
     }
-  }, [isFocused]);
+  }, [isFocused, queryClient, loadFavorites]);
 
   // Reset state and refresh list from storage when search term changes
   useEffect(() => {
     loadFavorites();
     queryClient.invalidateQueries({ queryKey: FAVORITOS_HOOK_KEY });
-  }, [searchTerm]);
+  }, [searchTerm, queryClient, loadFavorites]);
 
   const handleToggleHeart = async (item: ProductoFavorito) => {
     const newRemoved = new Set(removedIds);

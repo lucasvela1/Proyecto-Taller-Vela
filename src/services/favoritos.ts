@@ -31,7 +31,7 @@ export const obtenerFavoritos = async (): Promise<ProductoFavorito[]> => {
     console.error("Error al parsear favoritos, reseteando almacenamiento:", error);
     try {
       await AsyncStorage.removeItem(FAVORITOS_KEY);
-    } catch (_) {}
+    } catch {}
     return [];
   }
 };

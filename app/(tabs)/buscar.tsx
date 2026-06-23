@@ -116,7 +116,7 @@ export default function BuscarScreen() {
         <View style={styles.infoContainer}>
           <Ionicons name="basket-outline" size={64} color="#94a3b8" />
           <Text style={styles.infoText}>
-            No se encontraron productos coincidentes para "{debouncedTerm}".
+            No se encontraron productos coincidentes para &quot;{debouncedTerm}&quot;.
           </Text>
         </View>
       ) : (
