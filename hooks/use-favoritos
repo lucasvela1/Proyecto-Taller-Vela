@@ -1,3 +1,0 @@
-export const FAVORITOS_HOOK_KEY = "FAVORITOS_HOOK_KEY";
-
-

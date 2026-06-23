@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useRef } from "react";
 
-export function useRefreshOnFocus(queryKey: string) {
+export function useRefreshOnFocus(queryKey: readonly unknown[]) {
   const queryClient = useQueryClient();
   const firtsTimeRef = useRef(true); //El useRef se usa porque se mantiene a través de los rerenders
 
@@ -14,7 +14,7 @@ export function useRefreshOnFocus(queryKey: string) {
       }
 
       queryClient.refetchQueries({
-        queryKey: [queryKey],
+        queryKey,
         stale: true,
         type: "active",
       });

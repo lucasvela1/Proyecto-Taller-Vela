@@ -1,23 +1,35 @@
+import { FAVORITOS_HOOK_KEY, useFavoritos } from "@/hooks/use-favoritos";
 import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus";
-import { FAVORITOS_HOOK_KEY } from "@/src/hooks/use-favoritos";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
-
-//El _sitemap es un archivo generado automaticamente por Expor Router y se usa para
-//depurar y ver el mapa de rutas de la app
+import { Button, FlatList, StyleSheet, Text, View } from "react-native";
 
 export default function FavoritosScreen() {
   const router = useRouter();
   useRefreshOnFocus(FAVORITOS_HOOK_KEY);
-
+  const { data } = useFavoritos();
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Favoritos</Text>
-      {favoritos.map((favorito) => (
-        <Text key={favorito.id} style={styles.description}>
-          {favorito.nombre}
-        </Text>
-      ))}
+      <Text style={styles.description}>
+        Aquí puedes ver tus productos favoritos guardados.
+      </Text>
+      <Button title="SITEMAP" onPress={() => router.push("/_sitemap")} />
+      <FlatList
+        data={data}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View
+            style={{
+              padding: 12,
+              backgroundColor: "white",
+              borderRadius: 8,
+              width: "100%",
+            }}
+          >
+            <Text style={{ fontSize: 18 }}>{item.nombre}</Text>
+          </View>
+        )}
+      />
     </View>
   );
 }
