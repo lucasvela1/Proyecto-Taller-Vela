@@ -1,6 +1,6 @@
 import { marcas } from "@/src/data/marcas";
-import { productos } from "@/src/data/productos";
 import { buildRoute, ROUTES } from "@/src/navigation/routes";
+import { useProductosPorMarca } from "@/hooks/useProductos";
 import { Image } from "expo-image";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
@@ -11,6 +11,7 @@ import {
   Text,
   TextInput,
   View,
+  ActivityIndicator,
 } from "react-native";
 
 type MarcaParams = {
@@ -40,14 +41,14 @@ export default function MarcaScreen() {
 
   const marcaActual = marcas.find((marca) => marca.id === marcaId);
 
+  const { data: productosApi = [], isLoading, error } = useProductosPorMarca(marcaId);
+
   const productosFiltrados = useMemo(
     () =>
-      productos
-        .filter((producto) => producto.marcaId === marcaId)
-        .filter((producto) =>
-          producto.nombre.toLowerCase().includes(filtro.toLowerCase()),
-        ),
-    [marcaId, filtro],
+      productosApi.filter((producto) =>
+        producto.nombre.toLowerCase().includes(filtro.toLowerCase()),
+      ),
+    [productosApi, filtro],
   );
 
   const marcaTitle = marcaActual?.nombre ?? marcaId;
@@ -70,74 +71,85 @@ export default function MarcaScreen() {
         returnKeyType="search"
       />
 
-      <FlatList
-        data={productosFiltrados}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        style={styles.list}
-        renderItem={({ item }) => {
-          const nutriColors = getScoreColors(item.nutriScore);
-          const ecoColors = getScoreColors(item.ecoScore);
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Cargando productos...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Error al cargar productos.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={productosFiltrados}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          style={styles.list}
+          renderItem={({ item }) => {
+            const nutriColors = getScoreColors(item.nutriScore);
+            const ecoColors = getScoreColors(item.ecoScore);
 
-          return (
-            <Pressable
-              style={styles.productRow}
-              onPress={() =>
-                router.push(buildRoute(ROUTES.FICHA, { id: item.id }))
-              }
-            >
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={styles.productImage}
-                contentFit="cover"
-              />
+            return (
+              <Pressable
+                style={styles.productRow}
+                onPress={() =>
+                  router.push(buildRoute(ROUTES.FICHA, { id: item.id }))
+                }
+              >
+                <Image
+                  source={{ uri: item.imageUrl }}
+                  style={styles.productImage}
+                  contentFit="cover"
+                />
 
-              <View style={styles.productInfo}>
-                <Text style={styles.productName}>{item.nombre}</Text>
-                <Text style={styles.brandText}>{marcaTitle}</Text>
+                <View style={styles.productInfo}>
+                  <Text style={styles.productName}>{item.nombre}</Text>
+                  <Text style={styles.brandText}>{marcaTitle}</Text>
 
-                <View style={styles.scoreRow}>
-                  <View
-                    style={[
-                      styles.scoreBadge,
-                      { backgroundColor: nutriColors.backgroundColor },
-                    ]}
-                  >
-                    <Text
+                  <View style={styles.scoreRow}>
+                    <View
                       style={[
-                        styles.scoreBadgeText,
-                        { color: nutriColors.textColor },
+                        styles.scoreBadge,
+                        { backgroundColor: nutriColors.backgroundColor },
                       ]}
                     >
-                      Nutri-Score {item.nutriScore}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.scoreBadge,
-                      { backgroundColor: ecoColors.backgroundColor },
-                    ]}
-                  >
-                    <Text
+                      <Text
+                        style={[
+                          styles.scoreBadgeText,
+                          { color: nutriColors.textColor },
+                        ]}
+                      >
+                        Nutri-Score {item.nutriScore}
+                      </Text>
+                    </View>
+                    <View
                       style={[
-                        styles.scoreBadgeText,
-                        { color: ecoColors.textColor },
+                        styles.scoreBadge,
+                        { backgroundColor: ecoColors.backgroundColor },
                       ]}
                     >
-                      Eco-Score {item.ecoScore}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.scoreBadgeText,
+                          { color: ecoColors.textColor },
+                        ]}
+                      >
+                        Eco-Score {item.ecoScore}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </Pressable>
-          );
-        }}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            No se encontraron productos para esta marca.
-          </Text>
-        }
-      />
+              </Pressable>
+            );
+          }}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              No se encontraron productos para esta marca.
+            </Text>
+          }
+        />
+      )}
     </View>
   );
 }
@@ -218,5 +230,25 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: "#64748b",
     fontSize: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#64748b",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#dc2626",
+    textAlign: "center",
   },
 });

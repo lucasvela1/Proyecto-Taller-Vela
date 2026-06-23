@@ -1,9 +1,210 @@
+import { marcas } from "../data/marcas";
+import { Producto } from "../data/productos";
+
+const STATIC_ID_TO_BARCODE: Record<string, string> = {
+  "coca-cola-original": "7790895000997",
+  "coca-cola-zero": "7790895648595",
+  "pepsi-regular": "7790742111036",
+  "agua-saborizada": "7791813000570",
+  "papas-clasicas": "7790310000155",
+  "mix-frutos-secos": "7798319690184",
+  "galletas-choco": "7790040703831",
+  "yogur-vainilla": "7791330002164",
+  "leche-entera": "7790080039808",
+  "queso-crema": "7790080030584",
+  "hamburguesas-vacunas": "7790516102141",
+  "salchichas": "7790516101359",
+  "milanesas-pollo": "7790516104886",
+  "ensalada-lista": "7798316103328",
+  "espinaca-fresca": "7798316103335",
+  "zanahoria-baby": "7798316103342",
+  "manzana-roja": "7798316103359",
+  "banana-dulce": "7798316103366",
+  "frutillas-frescas": "7798316103373",
+  "granola-clasica": "7798319690221",
+  "copos-maiz": "7798319690238",
+  "avena-instantanea": "7798319690245",
+  "123": "7790895000997"
+};
+
+const CATEGORY_MAP: Record<string, string> = {
+  bebidas: "en:beverages",
+  snacks: "en:snacks",
+  lacteos: "en:dairies",
+  carnes: "en:meats",
+  vegetales: "en:vegetables",
+  frutas: "en:fruits",
+  cereales: "en:cereals"
+};
+
+const BASE_URL = "https://world.openfoodfacts.org";
+
+export function mapOpenFoodFactsProduct(
+  apiProduct: any,
+  fallbackCategory: string = "varios",
+  fallbackBrand: string = "varios",
+): Producto {
+  const normalizeGrade = (grade?: string): "A" | "B" | "C" | "D" | "E" => {
+    if (!grade) return "C";
+    const upper = grade.toUpperCase();
+    return ["A", "B", "C", "D", "E"].includes(upper) ? (upper as any) : "C";
+  };
+
+  const code = apiProduct.code || apiProduct._id || "";
+  const nombre =
+    apiProduct.product_name_es ||
+    apiProduct.product_name ||
+    "Producto desconocido";
+
+  const brandName = apiProduct.brands
+    ? apiProduct.brands.split(",")[0].trim()
+    : fallbackBrand;
+
+  //Buscamos si coincide con alguna de nuestras marcas que guardamos
+  //Tiene que coincidir TODA la palabra, si no se busca producto, si se pone Coca por ejemplo, traera todas las marca coca, si se pone coc buscara producto coincidentes
+  const matchedBrand = marcas.find(
+    (m) =>
+      m.nombre.toLowerCase() === brandName.toLowerCase() ||
+      m.id === brandName.toLowerCase(),
+  );
+  const resolvedMarcaId = matchedBrand ? matchedBrand.id : brandName;
+
+  const nutriments = apiProduct.nutriments || {};
+
+  const energyKj =
+    nutriments["energy-kj_100g"] !== undefined
+      ? `${nutriments["energy-kj_100g"]} kJ`
+      : "";
+  const energyKcal =
+    nutriments["energy-kcal_100g"] !== undefined
+      ? `${nutriments["energy-kcal_100g"]} kcal`
+      : "";
+
+  const energyResumen = energyKj || energyKcal || "0 kJ";
+  const energyValor = [energyKj, energyKcal].filter(Boolean).join(" / ") || "0 kJ";
+
+  const formatGrams = (val?: any) =>
+    val !== undefined && val !== null ? `${val} g` : "0 g";
+
+  return {
+    id: code,
+    nombre,
+    categoriaId: fallbackCategory,
+    marcaId: resolvedMarcaId,
+    imageUrl:
+      apiProduct.image_front_url ||
+      apiProduct.image_url ||
+      `https://placehold.co/200x200/f1f5f9/1e293b.png?text=${encodeURIComponent(nombre)}`,
+    nutriScore: normalizeGrade(apiProduct.nutriscore_grade),
+    novaGroup: (apiProduct.nova_group === 1 ||
+      apiProduct.nova_group === 2 ||
+      apiProduct.nova_group === 3 ||
+      apiProduct.nova_group === 4
+      ? apiProduct.nova_group
+      : 3) as any,
+    ecoScore: normalizeGrade(apiProduct.ecoscore_grade),
+    resumenNutrientes: {
+      energia: energyResumen,
+      grasa: formatGrams(nutriments.fat_100g),
+      proteina: formatGrams(nutriments.proteins_100g),
+      sales: formatGrams(nutriments.salt_100g),
+      carbohidratos: formatGrams(nutriments.carbohydrates_100g),
+    },
+    ingredientes:
+      apiProduct.ingredients_text_es ||
+      apiProduct.ingredients_text ||
+      "Ingredientes no especificados",
+    valorNutricional100ml: {
+      energia: energyValor,
+      grasa: formatGrams(nutriments.fat_100g),
+      grasasSaturadas: formatGrams(nutriments["saturated-fat_100g"]),
+      carbohidratos: formatGrams(nutriments.carbohydrates_100g),
+      azucares: formatGrams(nutriments.sugars_100g),
+      fibra: formatGrams(nutriments.fiber_100g),
+      proteina: formatGrams(nutriments.proteins_100g),
+      sal: formatGrams(nutriments.salt_100g),
+    },
+  };
+}
+
+export async function getProductsByCategory(categoriaId: string): Promise<Producto[]> {
+  const categoryTag = CATEGORY_MAP[categoriaId] || categoriaId;
+  const url = `${BASE_URL}/api/v2/search?categories_tags=${encodeURIComponent(categoryTag)}&lc=es&cc=es&fields=code,product_name,product_name_es,brands,image_front_url,image_url,nutriscore_grade,ecoscore_grade,nova_group,ingredients_text_es,ingredients_text,nutriments`;
+
+  const response = await fetch(url, {
+    headers: { "User-Agent": "ProyectoTallerVela/1.0 (lucasvela1@gmail.com)" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error HTTP: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.products) return [];
+
+  return data.products.map((p: any) => mapOpenFoodFactsProduct(p, categoriaId));
+}
+
+export async function getProductsByBrand(brandId: string): Promise<Producto[]> {
+  const url = `${BASE_URL}/api/v2/search?brands_tags=${encodeURIComponent(brandId)}&lc=es&cc=es&fields=code,product_name,product_name_es,brands,image_front_url,image_url,nutriscore_grade,ecoscore_grade,nova_group,ingredients_text_es,ingredients_text,nutriments`;
+
+  const response = await fetch(url, {
+    headers: { "User-Agent": "ProyectoTallerVela/1.0 (lucasvela1@gmail.com)" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error HTTP: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.products) return [];
+
+  return data.products.map((p: any) => mapOpenFoodFactsProduct(p, undefined, brandId));
+}
+
+export async function getProductByBarcode(barcode: string): Promise<Producto | null> {
+  const resolvedBarcode = STATIC_ID_TO_BARCODE[barcode] || barcode;
+
+  const response = await fetch(`${BASE_URL}/api/v2/product/${resolvedBarcode}?lc=es&cc=es`, {
+    headers: { "User-Agent": "ProyectoTallerVela/1.0 (lucasvela1@gmail.com)" },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error(`Error HTTP: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (data.status !== 1 || !data.product) {
+    return null;
+  }
+
+  return mapOpenFoodFactsProduct(data.product);
+}
+
+export async function searchProductsByQuery(query: string, page: number = 1): Promise<Producto[]> {
+  if (!query || query.trim().length === 0) return [];
+  const url = `${BASE_URL}/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10&page=${page}&lc=es&cc=es&fields=code,product_name,product_name_es,brands,image_front_url,image_url,nutriscore_grade,ecoscore_grade,nova_group,ingredients_text_es,ingredients_text,nutriments`;
+
+  const response = await fetch(url, {
+    headers: { "User-Agent": "ProyectoTallerVela/1.0 (lucasvela1@gmail.com)" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error HTTP: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.products) return [];
+
+  return data.products.map((p: any) => mapOpenFoodFactsProduct(p));
+}
+
 export async function searchProducts(
   categorias: string,
 ): Promise<ProductSearchResponse> {
   const url = "https://world.openfoodfacts.org/api/v2/search";
   const params = new URLSearchParams({
-    // brands_tags: "ferrero",
     categories_tags: categorias,
   });
 
@@ -636,7 +837,7 @@ export interface Type {
   soy_yield: number;
 }
 
-export interface Grades {}
+export interface Grades { }
 
 export interface Images {
   "1": The1;

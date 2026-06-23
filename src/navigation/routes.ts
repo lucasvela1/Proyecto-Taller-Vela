@@ -3,7 +3,7 @@ import { Href } from "expo-router";
 export const ROUTES = {
   HOME: "/", // /(tabs)/index esto quiere decir que la ruta de inicio es la pestaña "Inicio" dentro de las pestañas de navegación
   TABS_FAVS: "/favortitos", //se puede poner sin (tabs)
-  TABS_CLASSES: "/clases",
+  TABS_SEARCH: "/buscar",
   ALIMENTO: "/alimento",
   CATEGORIA: "/categorias/[nombre]",
   MARCA: "/marcas/[nombre]",

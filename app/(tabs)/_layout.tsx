@@ -47,17 +47,17 @@ export default function RootLayout() {
         }}
       />
       <Tabs.Screen
-        name="clases"
+        name="buscar"
         options={{
-          title: "Clases",
-          tabBarLabel: "Clases",
+          title: "Buscar",
+          tabBarLabel: "Buscar",
           tabBarActiveTintColor: "blue",
           tabBarInactiveTintColor: "gray",
           tabBarIcon: ({color, size, focused}) => (
             <Ionicons
-              name={focused ? "grid" : "grid-outline"} //Es el icono de cuadrícula para representar las clases
-              size={size} //tamaño del icono
-              color={color} //color del icono, que cambia según si está enfocado o no
+              name={focused ? "search" : "search-outline"}
+              size={size}
+              color={color}
             />
           )
         }}

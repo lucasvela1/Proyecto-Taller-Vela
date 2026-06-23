@@ -22,8 +22,18 @@ export const eliminarFavorito = async (productoId: string) => {
 };
 
 export const obtenerFavoritos = async (): Promise<ProductoFavorito[]> => {
-  const favoritos = await AsyncStorage.getItem(FAVORITOS_KEY);
-  return favoritos ? JSON.parse(favoritos) : [];
+  try {
+    const favoritos = await AsyncStorage.getItem(FAVORITOS_KEY);
+    if (!favoritos) return [];
+    const parsed = JSON.parse(favoritos);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error("Error al parsear favoritos, reseteando almacenamiento:", error);
+    try {
+      await AsyncStorage.removeItem(FAVORITOS_KEY);
+    } catch (_) {}
+    return [];
+  }
 };
 
 export const obtenerFavorito = async (

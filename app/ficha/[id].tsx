@@ -1,12 +1,12 @@
 import { FAVORITOS_HOOK_KEY, useFavoritos } from "@/hooks/use-favoritos";
 import { marcas } from "@/src/data/marcas";
-import { productos } from "@/src/data/productos";
+import { useProductoDetalle } from "@/hooks/useProductos";
 import { eliminarFavorito, guardarFavorito } from "@/src/services/favoritos";
 import { useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import "react-native-reanimated";
 
 type FichaScreenParams = {
@@ -37,7 +37,7 @@ const novaPalette: Record<
 export default function FichaScreen() {
   const { id } = useLocalSearchParams<FichaScreenParams>();
   const productId = typeof id === "string" ? id : "";
-  const producto = productos.find((item) => item.id === productId);
+  const { data: producto, isLoading, error } = useProductoDetalle(productId);
   const { data: favoritos = [] } = useFavoritos();
   const queryClient = useQueryClient();
   const isFavorito = useMemo(() => {
@@ -55,24 +55,39 @@ export default function FichaScreen() {
     }
     queryClient.invalidateQueries({
       queryKey: FAVORITOS_HOOK_KEY,
-    }); //Invalidamos la query de favoritos para que se vuelva a cargar la lista de favoritos actualizada
+    });
   }
 
-  if (!producto) {
+  if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
         <Stack.Screen
           options={{
-            headerTitle: "Producto",
+            headerTitle: "Cargando...",
           }}
         />
-        <Text style={styles.notFoundText}>No se encontro el producto.</Text>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={styles.notFoundText}>Cargando información del producto...</Text>
+      </View>
+    );
+  }
+
+  if (error || !producto) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Stack.Screen
+          options={{
+            headerTitle: "No Encontrado",
+          }}
+        />
+        <Text style={styles.notFoundText}>No se encontró el producto.</Text>
       </View>
     );
   }
 
   const marcaNombre =
     marcas.find((marca) => marca.id === producto.marcaId)?.nombre ??
+    producto.marcaId ??
     "Sin marca";
   const nutriColors = scorePalette[producto.nutriScore] ?? scorePalette.C;
   const ecoColors = scorePalette[producto.ecoScore] ?? scorePalette.C;
@@ -214,7 +229,7 @@ export default function FichaScreen() {
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Valor nutricional (por 100ml)</Text>
+          <Text style={styles.sectionTitle}>Valor nutricional (por 100g/ml)</Text>
           <NutrientRow
             label="Energia"
             value={producto.valorNutricional100ml.energia}
@@ -267,10 +282,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
+    gap: 16,
   },
   notFoundText: {
     fontSize: 18,
     color: "#475569",
+    textAlign: "center",
   },
   scrollContent: {
     paddingBottom: 24,
